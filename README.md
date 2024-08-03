@@ -61,19 +61,27 @@ curl -X POST "http://127.0.0.1:8000/items" -H "Content-Type: application/json" -
 #### Read an Item:
 
 ```bash
-curl "http://127.0.0.1:8000/items/1"
+curl "http://127.0.0.1:8000/items/{id}"
 ```
+
+
+#### Read a List of Items (Offset and Limit):
+
+```bash
+curl "http://127.0.0.1:8000/items?limit={limit}&offset={offset}"
+```
+
 
 #### Update an Item:
 
 ```bash
-curl -X PUT "http://127.0.0.1:8000/items/1" -H "Content-Type: application/json" -d '{"id": 1, "name": "Updated Item", "description": "Updated Description"}'
+curl -X PUT "http://127.0.0.1:8000/items/{id}" -H "Content-Type: application/json" -d '{"id": {id}, "name": "Updated Item", "description": "Updated Description"}'
 ```
 
 #### Delete an Item:
 
 ```bash
-curl -X DELETE "http://127.0.0.1:8000/items/1"
+curl -X DELETE "http://127.0.0.1:8000/items/{id}"
 ```
 
 ### Project Structure
