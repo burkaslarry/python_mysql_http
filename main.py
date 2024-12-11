@@ -25,20 +25,6 @@ pool = None
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
-# SWAGGER UI FOR API TESTING http://127.0.0.1:8000/docs
-@app.get("/hello")
-async def hello_world():
-    """
-    A simple hello world endpoint.
-
-    Returns a JSON response with a "hello world" message.
-    """
-    try:
-        return JSONResponse(content={"message": "hello world"})
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Error: {e}")
-
-
 @app.get("/api/homepage")
 async def get_homepage():
     """
@@ -79,104 +65,104 @@ async def get_homepage():
             status_code=500
         )
 
-
-@app.on_event("startup")
-async def startup():
-    global pool
-    logger.info("Creating database connection pool.")
-    pool = await aiomysql.create_pool(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        db=DB_NAME,
-        autocommit=True,
-        loop=asyncio.get_event_loop(),
-    )
-    logger.info("Database connection pool created.")
-
-@app.on_event("shutdown")
-async def shutdown():
-    global pool
-    logger.info("Closing database connection pool.")
-    pool.close()
-    await pool.wait_closed()
-    logger.info("Database connection pool closed.")
-
-class ItemCreate(BaseModel):
-    name: str
-    description: str
-
-class Item(ItemCreate):
-    id: int
-
-@app.get("/")
-async def read_root():
-    return {"message": "Hello, World"}
-
-@app.get("/items/{item_id}", response_model=Item)
-async def read_item(item_id: int):
-    try:
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("SELECT id, name, description FROM items WHERE id = %s", (item_id,))
-                result = await cur.fetchone()
-                if result:
-                    return Item(id=result[0], name=result[1], description=result[2])
-                else:
-                    raise HTTPException(status_code=404, detail="Item not found")
-    except Exception as e:
-        logger.error(f"Error reading item with id {item_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-@app.post("/items", response_model=Item)
-async def create_item(item: ItemCreate):
-    try:
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("INSERT INTO items (name, description) VALUES (%s, %s)", (item.name, item.description))
-                item_id = cur.lastrowid
-                return Item(id=item_id, name=item.name, description=item.description)
-    except Exception as e:
-        logger.error(f"Error creating item: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-@app.put("/items/{item_id}", response_model=Item)
-async def update_item(item_id: int, item: ItemCreate):
-    try:
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("UPDATE items SET name = %s, description = %s WHERE id = %s", (item.name, item.description, item_id))
-                return Item(id=item_id, name=item.name, description=item.description)
-    except Exception as e:
-        logger.error(f"Error updating item with id {item_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-@app.delete("/items/{item_id}")
-async def delete_item(item_id: int):
-    try:
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("DELETE FROM items WHERE id = %s", (item_id,))
-                if cur.rowcount == 0:
-                    raise HTTPException(status_code=404, detail="Item not found")
-                return {"message": "Item deleted"}
-    except Exception as e:
-        logger.error(f"Error deleting item with id {item_id}: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
-
-
-@app.get("/items", response_model=list[Item])
-async def read_items(limit: int = Query(10), offset: int = Query(0)):
-    try:
-        async with pool.acquire() as conn:
-            async with conn.cursor() as cur:
-                await cur.execute("SELECT id, name, description FROM items LIMIT %s OFFSET %s", (limit, offset))
-                results = await cur.fetchall()
-                return [Item(id=row[0], name=row[1], description=row[2]) for row in results]
-    except Exception as e:
-        logger.error(f"Error fetching items: {e}")
-        raise HTTPException(status_code=500, detail="Internal Server Error")
+#
+# @app.on_event("startup")
+# async def startup():
+#     global pool
+#     logger.info("Creating database connection pool.")
+#     pool = await aiomysql.create_pool(
+#         host=DB_HOST,
+#         port=DB_PORT,
+#         user=DB_USER,
+#         password=DB_PASSWORD,
+#         db=DB_NAME,
+#         autocommit=True,
+#         loop=asyncio.get_event_loop(),
+#     )
+#     logger.info("Database connection pool created.")
+#
+# @app.on_event("shutdown")
+# async def shutdown():
+#     global pool
+#     logger.info("Closing database connection pool.")
+#     pool.close()
+#     await pool.wait_closed()
+#     logger.info("Database connection pool closed.")
+#
+# class ItemCreate(BaseModel):
+#     name: str
+#     description: str
+#
+# class Item(ItemCreate):
+#     id: int
+#
+# @app.get("/")
+# async def read_root():
+#     return {"message": "Hello, World"}
+#
+# @app.get("/items/{item_id}", response_model=Item)
+# async def read_item(item_id: int):
+#     try:
+#         async with pool.acquire() as conn:
+#             async with conn.cursor() as cur:
+#                 await cur.execute("SELECT id, name, description FROM items WHERE id = %s", (item_id,))
+#                 result = await cur.fetchone()
+#                 if result:
+#                     return Item(id=result[0], name=result[1], description=result[2])
+#                 else:
+#                     raise HTTPException(status_code=404, detail="Item not found")
+#     except Exception as e:
+#         logger.error(f"Error reading item with id {item_id}: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+#
+# @app.post("/items", response_model=Item)
+# async def create_item(item: ItemCreate):
+#     try:
+#         async with pool.acquire() as conn:
+#             async with conn.cursor() as cur:
+#                 await cur.execute("INSERT INTO items (name, description) VALUES (%s, %s)", (item.name, item.description))
+#                 item_id = cur.lastrowid
+#                 return Item(id=item_id, name=item.name, description=item.description)
+#     except Exception as e:
+#         logger.error(f"Error creating item: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+#
+# @app.put("/items/{item_id}", response_model=Item)
+# async def update_item(item_id: int, item: ItemCreate):
+#     try:
+#         async with pool.acquire() as conn:
+#             async with conn.cursor() as cur:
+#                 await cur.execute("UPDATE items SET name = %s, description = %s WHERE id = %s", (item.name, item.description, item_id))
+#                 return Item(id=item_id, name=item.name, description=item.description)
+#     except Exception as e:
+#         logger.error(f"Error updating item with id {item_id}: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+#
+# @app.delete("/items/{item_id}")
+# async def delete_item(item_id: int):
+#     try:
+#         async with pool.acquire() as conn:
+#             async with conn.cursor() as cur:
+#                 await cur.execute("DELETE FROM items WHERE id = %s", (item_id,))
+#                 if cur.rowcount == 0:
+#                     raise HTTPException(status_code=404, detail="Item not found")
+#                 return {"message": "Item deleted"}
+#     except Exception as e:
+#         logger.error(f"Error deleting item with id {item_id}: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
+#
+#
+# @app.get("/items", response_model=list[Item])
+# async def read_items(limit: int = Query(10), offset: int = Query(0)):
+#     try:
+#         async with pool.acquire() as conn:
+#             async with conn.cursor() as cur:
+#                 await cur.execute("SELECT id, name, description FROM items LIMIT %s OFFSET %s", (limit, offset))
+#                 results = await cur.fetchall()
+#                 return [Item(id=row[0], name=row[1], description=row[2]) for row in results]
+#     except Exception as e:
+#         logger.error(f"Error fetching items: {e}")
+#         raise HTTPException(status_code=500, detail="Internal Server Error")
 
 if __name__ == "__main__":
     import uvicorn
