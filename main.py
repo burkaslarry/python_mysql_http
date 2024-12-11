@@ -25,6 +25,61 @@ pool = None
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
 
+# SWAGGER UI FOR API TESTING http://127.0.0.1:8000/docs
+@app.get("/hello")
+async def hello_world():
+    """
+    A simple hello world endpoint.
+
+    Returns a JSON response with a "hello world" message.
+    """
+    try:
+        return JSONResponse(content={"message": "hello world"})
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"Error: {e}")
+
+
+@app.get("/api/homepage")
+async def get_homepage():
+    """
+    Retrieves user data from a JSON file.
+
+    Attempts to read and parse user data from 'demo_data/users.json'.
+    Returns the data as a JSON response. Handles potential errors like
+    file not found, JSON decoding errors, and other unexpected exceptions.
+    """
+    try:
+        # Construct the file path
+        file_path = os.path.join("demo_data", "homepage.json")
+        print(f"Trying to open file: {file_path}")  # Debugging statement
+
+        # Read and parse the JSON file
+        with open(file_path, 'r') as f:
+            users = json.load(f)
+
+        # Return the user data
+        return JSONResponse(content=users)
+
+    except FileNotFoundError as e:
+        print(f"FileNotFoundError: {e}")  # Debugging output
+        return JSONResponse(
+            content={"error": "File not found. Please ensure 'demo_data/users.json' exists."},
+            status_code=404
+        )
+    except json.JSONDecodeError as e:
+        print(f"JSONDecodeError: {e}")  # Debugging output
+        return JSONResponse(
+            content={"error": "Error decoding JSON. Ensure the file contains valid JSON data."},
+            status_code=400
+        )
+    except Exception as e:
+        print(f"Unexpected error: {e}")  # Debugging output
+        return JSONResponse(
+            content={"error": f"An unexpected error occurred: {str(e)}"},
+            status_code=500
+        )
+
+
 @app.on_event("startup")
 async def startup():
     global pool

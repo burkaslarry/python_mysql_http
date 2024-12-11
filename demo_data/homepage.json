@@ -1,0 +1,25 @@
+{
+  "home": {
+    "title": "Welcome to InnovateXP",
+    "content": "We empower businesses to thrive in the digital age by providing cutting-edge data analysis, AI solutions, and robust full-stack development. From strategic consulting to custom software development, we transform your challenges into opportunities."
+  },
+  "about": {
+    "title": "About Us",
+    "content": "InnovateXP is a team of experienced data scientists, AI specialists, and software engineers passionate about delivering innovative solutions. We combine technical expertise with a deep understanding of business needs to help our clients achieve their goals. Our commitment to excellence and customer satisfaction sets us apart."
+  },
+  "services": {
+    "title": "Services",
+    "items": [
+      {"name": "Data Analysis & Insights", "description": "Uncover hidden patterns, predict future trends, and make data-driven decisions."},
+      {"name": "AI Solutions", "description": "Leverage the power of artificial intelligence to automate processes, personalize experiences, and gain a competitive edge."},
+      {"name": "Full-Stack Development", "description": "Build scalable and reliable web and mobile applications tailored to your specific requirements."},
+      {"name": "Business Consulting", "description": "Strategic planning, SWOT analysis, and expert guidance to optimize your business operations."}
+    ]
+  },
+  "contact": {
+    "title": "Contact Us",
+    "content": "Ready to discuss your next project? We'd love to hear from you!",
+    "email": "info@innovatexp.com",
+    "phone": "+1 123-456-7890"
+  }
+}
