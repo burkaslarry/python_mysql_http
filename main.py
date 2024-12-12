@@ -14,6 +14,15 @@ load_dotenv()
 
 app = FastAPI()
 
+# Add CORS middleware
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
 # Database configuration
 DB_HOST = os.getenv("DB_HOST")
 DB_USER = os.getenv("DB_USER")
