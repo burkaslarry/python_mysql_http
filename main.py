@@ -8,11 +8,55 @@ import asyncio
 import json
 import os
 import logging
+from contextlib import asynccontextmanager
 
 # Load environment variables from .env file
 load_dotenv()
 
-app = FastAPI()
+# Configure logging
+logging.basicConfig(level=logging.INFO)
+logger = logging.getLogger(__name__)
+
+# Database configuration
+DB_HOST = os.getenv("DB_HOST")
+DB_USER = os.getenv("DB_USER")
+DB_PASSWORD = os.getenv("DB_PASSWORD")
+DB_NAME = os.getenv("DB_NAME")
+DB_PORT = os.getenv("DB_PORT")
+
+# Database connection pool
+pool = None
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    global pool
+    logger.info("Creating database connection pool.")
+    try:
+        # Only attempt connection if config is present
+        if DB_HOST and DB_USER and DB_PASSWORD and DB_NAME:
+            pool = await aiomysql.create_pool(
+                host=DB_HOST,
+                port=int(DB_PORT) if DB_PORT else 3306,
+                user=DB_USER,
+                password=DB_PASSWORD,
+                db=DB_NAME,
+                autocommit=True,
+            )
+            logger.info("Database connection pool created.")
+        else:
+            logger.warning("Database configuration missing. Database features will not work.")
+    except Exception as e:
+        logger.error(f"Failed to create database connection pool: {e}")
+
+    yield
+
+    if pool:
+        logger.info("Closing database connection pool.")
+        pool.close()
+        await pool.wait_closed()
+        logger.info("Database connection pool closed.")
+
+app = FastAPI(lifespan=lifespan)
 
 # Add CORS middleware
 app.add_middleware(
@@ -23,33 +67,19 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-# Database configuration
-DB_HOST = os.getenv("DB_HOST")
-DB_USER = os.getenv("DB_USER")
-DB_PASSWORD = os.getenv("DB_PASSWORD")
-DB_NAME = os.getenv("DB_NAME")
-DB_PORT = int(os.getenv("DB_PORT"))
-
-# Database connection pool
-pool = None
-
-# Configure logging
-logging.basicConfig(level=logging.INFO)
-logger = logging.getLogger(__name__)
-
 @app.get("/api/homepage")
 async def get_homepage():
     """
     Retrieves user data from a JSON file.
 
-    Attempts to read and parse user data from 'demo_data/users.json'.
+    Attempts to read and parse user data from 'demo_data/homepage.json'.
     Returns the data as a JSON response. Handles potential errors like
     file not found, JSON decoding errors, and other unexpected exceptions.
     """
     try:
         # Construct the file path
         file_path = os.path.join("demo_data", "homepage.json")
-        print(f"Trying to open file: {file_path}")  # Debugging statement
+        logger.debug(f"Trying to open file: {file_path}")
 
         # Read and parse the JSON file
         with open(file_path, 'r') as f:
@@ -59,47 +89,23 @@ async def get_homepage():
         return JSONResponse(content=users)
 
     except FileNotFoundError as e:
-        print(f"FileNotFoundError: {e}")  # Debugging output
+        logger.error(f"FileNotFoundError: {e}")
         return JSONResponse(
-            content={"error": "File not found. Please ensure 'demo_data/users.json' exists."},
+            content={"error": "File not found. Please ensure 'demo_data/homepage.json' exists."},
             status_code=404
         )
     except json.JSONDecodeError as e:
-        print(f"JSONDecodeError: {e}")  # Debugging output
+        logger.error(f"JSONDecodeError: {e}")
         return JSONResponse(
             content={"error": "Error decoding JSON. Ensure the file contains valid JSON data."},
             status_code=400
         )
     except Exception as e:
-        print(f"Unexpected error: {e}")  # Debugging output
+        logger.error(f"Unexpected error: {e}")
         return JSONResponse(
             content={"error": f"An unexpected error occurred: {str(e)}"},
             status_code=500
         )
-
-
-@app.on_event("startup")
-async def startup():
-    global pool
-    logger.info("Creating database connection pool.")
-    pool = await aiomysql.create_pool(
-        host=DB_HOST,
-        port=DB_PORT,
-        user=DB_USER,
-        password=DB_PASSWORD,
-        db=DB_NAME,
-        autocommit=True,
-        loop=asyncio.get_event_loop(),
-    )
-    logger.info("Database connection pool created.")
-
-@app.on_event("shutdown")
-async def shutdown():
-    global pool
-    logger.info("Closing database connection pool.")
-    pool.close()
-    await pool.wait_closed()
-    logger.info("Database connection pool closed.")
 
 class ItemCreate(BaseModel):
     name: str
@@ -114,6 +120,8 @@ async def read_root():
 
 @app.get("/items/{item_id}", response_model=Item)
 async def read_item(item_id: int):
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database not configured")
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -129,6 +137,8 @@ async def read_item(item_id: int):
 
 @app.post("/items", response_model=Item)
 async def create_item(item: ItemCreate):
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database not configured")
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -141,6 +151,8 @@ async def create_item(item: ItemCreate):
 
 @app.put("/items/{item_id}", response_model=Item)
 async def update_item(item_id: int, item: ItemCreate):
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database not configured")
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -152,6 +164,8 @@ async def update_item(item_id: int, item: ItemCreate):
 
 @app.delete("/items/{item_id}")
 async def delete_item(item_id: int):
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database not configured")
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -166,6 +180,8 @@ async def delete_item(item_id: int):
 
 @app.get("/items", response_model=list[Item])
 async def read_items(limit: int = Query(10), offset: int = Query(0)):
+    if not pool:
+        raise HTTPException(status_code=503, detail="Database not configured")
     try:
         async with pool.acquire() as conn:
             async with conn.cursor() as cur:
@@ -178,4 +194,6 @@ async def read_items(limit: int = Query(10), offset: int = Query(0)):
 
 if __name__ == "__main__":
     import uvicorn
-    uvicorn.run(app, host="0.0.0.0", port=8000)
+    # Use environment variable for port, default to 8000
+    port = int(os.getenv("PORT", 8000))
+    uvicorn.run(app, host="0.0.0.0", port=port)
