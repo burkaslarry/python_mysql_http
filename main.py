@@ -10,6 +10,9 @@ import os
 import logging
 from contextlib import asynccontextmanager
 
+# Import new modules
+from app.routes import crud, csv_routes
+
 # Load environment variables from .env file
 load_dotenv()
 
@@ -66,6 +69,10 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Include new route modules
+app.include_router(crud.router)
+app.include_router(csv_routes.router)
 
 @app.get("/api/homepage")
 async def get_homepage():
